@@ -10,6 +10,8 @@
 
 public class TimeLoggingConfig
 {
+    public int TickTimeInMinutes { get; set; }
+    
     public string StartTime { get; set; }
     
     public string EndTime { get; set; }

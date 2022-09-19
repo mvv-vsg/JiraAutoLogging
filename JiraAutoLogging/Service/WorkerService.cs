@@ -16,6 +16,8 @@ public class WorkerService
 {
     private const string StorageFileName = "storage.json";
 
+    private readonly TimeDistributionConfig _timeDistribution;
+    
     private readonly ServicesConfig _servicesConfig;
     
     private readonly ILogger<WorkerService> _logger;
@@ -30,8 +32,9 @@ public class WorkerService
 
     private readonly IEnumerable<string> _scopes = new[] { "Presence.Read", "Presence.Read.All", "offline_access" };
 
-    public WorkerService(ILogger<WorkerService> logger, ServicesConfig servicesConfig)
+    public WorkerService(ILogger<WorkerService> logger, ServicesConfig servicesConfig, TimeDistributionConfig timeDistribution)
     {
+        _timeDistribution = timeDistribution;
         _logger = logger;
         _servicesConfig = servicesConfig;
 
@@ -245,10 +248,19 @@ public class WorkerService
             return;
         }
 
-        foreach (var key in keys)
+        for (var i = 0; i < keys.Count; i++)
         {
-            var timeToLog = timespan.TotalSeconds / (keys.Count < 1 ? 1 : keys.Count);
+            var key = keys[i];
+
+            var timeToLog = 1 * 60; // default to 1 minute
             
+            // if time distribution is not configured for this number of tasks, by default log 1 minute on each
+            if (_timeDistribution.ContainsKey(keys.Count.ToString()))
+            {
+                var timeDistribution = _timeDistribution[keys.Count.ToString()];
+                timeToLog = timeDistribution[i] * 60;   
+            }
+
             var worklogItemId = tempoResult.Results.FirstOrDefault(wl => wl.Issue.Key == key);
             
             // if an item doesn't exist yet, create a new one

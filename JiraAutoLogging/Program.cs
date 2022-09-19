@@ -7,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddFile(builder.Configuration["LogFile"]);
 
 // Add services to the container.
+builder.Services.AddSingleton(builder.Configuration.GetSection("TimeDistribution").Get<TimeDistributionConfig>());
 builder.Services.AddSingleton(builder.Configuration.GetSection("Services").Get<ServicesConfig>());
 builder.Services.AddSingleton(builder.Configuration.GetSection("TimeLogging").Get<TimeLoggingConfig>());
 builder.Services.AddTransient<WorkerService>();

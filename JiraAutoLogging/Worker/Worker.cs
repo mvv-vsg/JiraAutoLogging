@@ -5,8 +5,6 @@ namespace JiraAutoLogging.Worker;
 
 public class Worker : BackgroundService
 {
-    private const int Delay = 300000; // 5 minutes in millis
-    
     private readonly ILogger<Worker> _logger;
     private readonly WorkerService _workerService;
     private readonly TimeLoggingConfig _timeLogging;
@@ -48,11 +46,11 @@ public class Worker : BackgroundService
                 {
                     var keys = await _workerService.GetListOfTasksInProgress();
 
-                    await _workerService.LogTimeForKey(keys, TimeSpan.FromMilliseconds(Delay));
+                    await _workerService.LogTimeForKey(keys, TimeSpan.FromMilliseconds(FetchTimeLoggingDelay()));
                 }
                 else
                 {
-                    await _workerService.LogTimeForKey(new List<string> {"IP-24"}, TimeSpan.FromMilliseconds(Delay));
+                    await _workerService.LogTimeForKey(new List<string> {"IP-24"}, TimeSpan.FromMilliseconds(FetchTimeLoggingDelay()));
                 }
             }
             catch (Exception e)
@@ -60,7 +58,12 @@ public class Worker : BackgroundService
                 _logger.LogError(e, "Error occured");
             }
 
-            await Task.Delay(Delay, stoppingToken);
+            await Task.Delay(FetchTimeLoggingDelay(), stoppingToken);
         }
+    }
+
+    private int FetchTimeLoggingDelay()
+    {
+        return (int) TimeSpan.FromMinutes(_timeLogging.TickTimeInMinutes).TotalMilliseconds;
     }
 }

@@ -42,15 +42,23 @@ public class Worker : BackgroundService
                     continue;
                 }
 
+                
                 if (presence.Availability != "Busy")
                 {
                     var keys = await _workerService.GetListOfTasksInProgress();
 
-                    await _workerService.LogTimeForKey(keys, TimeSpan.FromMilliseconds(FetchTimeLoggingDelay()));
+                    if (keys.Count > 0)
+                    {
+                        await _workerService.LogTimeForKey(keys, TimeSpan.FromMilliseconds(FetchTimeLoggingDelay()));
+                    }
+                    else
+                    {
+                        await _workerService.LogTimeForKey(new List<string> {_timeLogging.IdleTask}, TimeSpan.FromMilliseconds(FetchTimeLoggingDelay()));
+                    }
                 }
                 else
                 {
-                    await _workerService.LogTimeForKey(new List<string> {"IP-24"}, TimeSpan.FromMilliseconds(FetchTimeLoggingDelay()));
+                    await _workerService.LogTimeForKey(new List<string> {_timeLogging.MeetingTask}, TimeSpan.FromMilliseconds(FetchTimeLoggingDelay()));
                 }
             }
             catch (Exception e)

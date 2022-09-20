@@ -21,4 +21,8 @@ public class TimeLoggingConfig
     public string BreakStartTime { get; set; }
     
     public string BreakEndTime { get; set; }
+    
+    public string MeetingTask { get; set; }
+    
+    public string IdleTask { get; set; }
 }

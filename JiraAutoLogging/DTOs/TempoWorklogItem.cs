@@ -6,5 +6,7 @@ public class TempoWorklogItem
     
     public long TimeSpentSeconds { get; set; }
     
+    public string? Description { get; set; }
+    
     public TempoWorklogIssue Issue { get; set; }
 }

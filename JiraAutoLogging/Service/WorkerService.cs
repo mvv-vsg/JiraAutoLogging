@@ -261,7 +261,7 @@ public class WorkerService
                 timeToLog = timeDistribution[i] * 60;   
             }
 
-            var worklogItemId = tempoResult.Results.FirstOrDefault(wl => wl.Issue.Key == key);
+            var worklogItemId = tempoResult.Results.FirstOrDefault(wl => wl.Description?.Contains(key) ?? false);
             
             // if an item doesn't exist yet, create a new one
             if (worklogItemId == null)

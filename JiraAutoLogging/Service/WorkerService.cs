@@ -207,11 +207,12 @@ public class WorkerService
             RequestUri = new UriBuilder($"https://clcsdevelopment.atlassian.net/rest/api/2/search?jql={_servicesConfig.JiraFilter}").Uri
         };
         
-        var jiraResult = JsonConvert.DeserializeObject<JiraTaskListResponse>(await (await _jiraClient.SendAsync(jiraReq)).Content.ReadAsStringAsync());
+        var resultStr = await (await _jiraClient.SendAsync(jiraReq)).Content.ReadAsStringAsync();
+        var jiraResult = JsonConvert.DeserializeObject<JiraTaskListResponse>(resultStr);
 
         if (jiraResult != null && jiraResult.Issues.Count >= 1)
         {
-            return jiraResult.Issues.Select(i => i.Key).ToList();
+            return jiraResult.Issues.Select(i => i.Id).ToList();
         }
         
         _logger.LogWarning("No issues in progress");
@@ -238,13 +239,14 @@ public class WorkerService
             RequestUri = new UriBuilder($"https://api.tempo.io/4/worklogs/user/{_servicesConfig.TempoAccountId}?from={DateTime.Today.ToString("yyyy-MM-dd")}&to={DateTime.Today.ToString("yyyy-MM-dd")}").Uri
         };
 
-        var strResult = await (await _tempoClient.SendAsync(tempoReq)).Content.ReadAsStringAsync();
+        var tempoReqResponse = await _tempoClient.SendAsync(tempoReq);
+        var strResult = await tempoReqResponse.Content.ReadAsStringAsync();
         
         var tempoResult = JsonConvert.DeserializeObject<TempoWorklogResponse>(strResult);
 
-        if (tempoResult == null)
+        if (!tempoReqResponse.IsSuccessStatusCode || tempoResult == null)
         {
-            _logger.LogWarning("Tempo result returned null");
+            _logger.LogWarning($"Tempo result was unsuccessful: {strResult}");
             return;
         }
 
@@ -261,7 +263,7 @@ public class WorkerService
                 timeToLog = timeDistribution[i] * 60;   
             }
 
-            var worklogItemId = tempoResult.Results.FirstOrDefault(wl => wl.Description?.Contains(key) ?? false);
+            var worklogItemId = tempoResult.Results.FirstOrDefault(wl => wl.Issue.Id.Equals(key));
             
             // if an item doesn't exist yet, create a new one
             if (worklogItemId == null)
@@ -273,13 +275,19 @@ public class WorkerService
                     Content = JsonContent.Create(new
                     {
                         AuthorAccountId = _servicesConfig.TempoAccountId,
-                        IssueKey = key,
+                        issueId = key,
                         StartDate = DateTime.Now.ToString("yyyy-MM-dd"),
                         TimeSpentSeconds = timeToLog
                     })
                 };
 
-                var result = await (await _tempoClient.SendAsync(tempoCreateWorklogRequest)).Content.ReadAsStringAsync();
+                var response = await _tempoClient.SendAsync(tempoCreateWorklogRequest);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning($"Unsuccessful request. Response was: {result} ");
+                }
             }
             else // if an item already exists, update it
             {
@@ -290,13 +298,19 @@ public class WorkerService
                     Content = JsonContent.Create(new
                     {
                         AuthorAccountId = _servicesConfig.TempoAccountId,
-                        IssueKey = key,
+                        IssueId = key,
                         StartDate = DateTime.Now.ToString("yyyy-MM-dd"),
                         TimeSpentSeconds = worklogItemId.TimeSpentSeconds + timeToLog
                     })
                 };
-            
-                var result = await (await _tempoClient.SendAsync(tempoUpdateWorklogRequest)).Content.ReadAsStringAsync();
+
+                var response = await _tempoClient.SendAsync(tempoUpdateWorklogRequest);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning($"Unsuccessful request. Response was: {result} ");
+                }
             }
         }
         

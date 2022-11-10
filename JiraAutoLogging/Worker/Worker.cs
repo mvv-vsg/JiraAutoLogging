@@ -22,16 +22,16 @@ public class Worker : BackgroundService
         {
             try
             {
-                var presence = await _workerService.FetchMicrosoftPresence();
-
                 if (new[] {DayOfWeek.Saturday, DayOfWeek.Sunday}.Contains(DateTime.Now.DayOfWeek))
                 {
+                    await Task.Delay(FetchTimeLoggingDelay(), stoppingToken);   
                     continue;
                 }
                 
                 if ((TimeSpan.Parse(_timeLogging.StartTime) > DateTime.Now.TimeOfDay ||
                     TimeSpan.Parse(_timeLogging.EndTime) < DateTime.Now.TimeOfDay))
                 {
+                    await Task.Delay(FetchTimeLoggingDelay(), stoppingToken);
                     continue;
                 }
                 
@@ -39,9 +39,11 @@ public class Worker : BackgroundService
                     TimeSpan.Parse(_timeLogging.BreakStartTime) < DateTime.Now.TimeOfDay &&
                     TimeSpan.Parse(_timeLogging.BreakEndTime) > DateTime.Now.TimeOfDay)
                 {
+                    await Task.Delay(FetchTimeLoggingDelay(), stoppingToken);
                     continue;
                 }
 
+                var presence = await _workerService.FetchMicrosoftPresence();
                 
                 if (presence.Availability != "Busy")
                 {
